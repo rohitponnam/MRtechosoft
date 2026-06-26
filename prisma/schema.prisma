@@ -1,0 +1,207 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  ADMIN
+  CLIENT
+  STUDENT
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  PROPOSAL
+  WON
+  LOST
+}
+
+enum EnrollmentStatus {
+  PENDING
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum ProposalStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  DECLINED
+}
+
+model User {
+  id            String         @id @default(cuid())
+  name          String
+  email         String         @unique
+  passwordHash  String
+  role          UserRole
+  company       String?
+  phone         String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  enrollments   Enrollment[]
+  projects      Project[]
+  proposals     Proposal[]
+  payments      Payment[]
+  conversations Conversation[]
+}
+
+model Lead {
+  id            String     @id @default(cuid())
+  name          String
+  email         String
+  phone         String?
+  company       String?
+  interest      String
+  message       String?
+  budget        String?
+  timeline      String?
+  source        String     @default("Website")
+  status        LeadStatus @default(NEW)
+  score         Int        @default(0)
+  scoreReason   String?
+  crmId         String?
+  crmSyncedAt   DateTime?
+  followupCount Int        @default(0)
+  lastContacted DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  proposals     Proposal[]
+
+  @@index([status, score])
+  @@index([email])
+}
+
+model Course {
+  id          String       @id @default(cuid())
+  slug        String       @unique
+  title       String
+  description String
+  duration    String
+  priceCents  Int
+  active      Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  enrollments Enrollment[]
+}
+
+model Enrollment {
+  id         String           @id @default(cuid())
+  userId     String
+  courseId   String
+  status     EnrollmentStatus @default(PENDING)
+  progress   Int              @default(0)
+  enrolledAt DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course     Course           @relation(fields: [courseId], references: [id])
+  payments   Payment[]
+
+  @@unique([userId, courseId])
+}
+
+model Project {
+  id            String    @id @default(cuid())
+  clientId      String
+  name          String
+  description   String
+  status        String    @default("Discovery")
+  progress      Int       @default(10)
+  nextMilestone String?
+  dueDate       DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  client        User      @relation(fields: [clientId], references: [id], onDelete: Cascade)
+}
+
+model Proposal {
+  id          String         @id @default(cuid())
+  number      String         @unique
+  title       String
+  clientName  String
+  clientEmail String
+  company     String?
+  summary     String
+  scope       String
+  timeline    String
+  amountCents Int
+  status      ProposalStatus @default(DRAFT)
+  validUntil  DateTime
+  leadId      String?
+  clientId    String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  lead        Lead?          @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  client      User?          @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  payments    Payment[]
+}
+
+model Payment {
+  id                String        @id @default(cuid())
+  userId            String?
+  enrollmentId      String?
+  proposalId        String?
+  amountCents       Int
+  currency          String        @default("usd")
+  status            PaymentStatus @default(PENDING)
+  provider          String        @default("stripe")
+  providerSessionId String?       @unique
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  user              User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  enrollment        Enrollment?   @relation(fields: [enrollmentId], references: [id], onDelete: SetNull)
+  proposal          Proposal?     @relation(fields: [proposalId], references: [id], onDelete: SetNull)
+}
+
+model Conversation {
+  id        String        @id @default(cuid())
+  userId    String?
+  visitorId String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  user      User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  messages  ChatMessage[]
+}
+
+model ChatMessage {
+  id             String       @id @default(cuid())
+  conversationId String
+  role           String
+  content        String
+  createdAt      DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+}
+
+model TrainingInquiry {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  course    String
+  status    String   @default("NEW")
+  createdAt DateTime @default(now())
+}
+
+model PlacementCandidate {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  skill     String
+  resumeUrl String?
+  status    String   @default("NEW")
+  createdAt DateTime @default(now())
+}
