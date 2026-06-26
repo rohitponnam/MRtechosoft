@@ -2,10 +2,15 @@
   "name": "consulting-ai-platform",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20.11.0 <25"
+  },
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack",
+    "dev:turbopack": "next dev",
     "postinstall": "prisma generate",
     "build": "next build",
+    "build:webpack": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
     "prisma": "prisma generate",
